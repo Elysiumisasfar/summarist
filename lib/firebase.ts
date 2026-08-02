@@ -1,5 +1,5 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
+import { getAuth, Auth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -10,10 +10,16 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase only if an API key exists or if an app is already initialized
-const app = getApps().length > 0 
-  ? getApp() 
-  : (process.env.NEXT_PUBLIC_FIREBASE_API_KEY ? initializeApp(firebaseConfig) : null);
+// Check if we are running in the browser and if the key exists
+const hasApiKey = typeof process.env.NEXT_PUBLIC_FIREBASE_API_KEY === "string" && process.env.NEXT_PUBLIC_FIREBASE_API_KEY.length > 0;
 
-// Safely export auth
-export const auth = app ? getAuth(app) : ({} as ReturnType<typeof getAuth>);
+let app: FirebaseApp | undefined;
+
+if (getApps().length > 0) {
+  app = getApp();
+} else if (hasApiKey) {
+  app = initializeApp(firebaseConfig);
+}
+
+// Safely initialize auth only if app exists
+export const auth = app ? getAuth(app) : ({} as Auth);
