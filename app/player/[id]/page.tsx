@@ -1,206 +1,234 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Book } from "@/types/book";
-import { 
-  BsPlayCircleFill, 
-  BsPauseCircleFill, 
-  BsArrowLeftShort, 
-  BsArrowRightShort 
+import { useAuth } from "@/context/AuthContext";
+import {
+  BsPlayCircleFill,
+  BsPauseCircleFill,
+  BsArrowLeft,
+  BsArrowCounterclockwise,
+  BsArrowClockwise
 } from "react-icons/bs";
 
-export default function AudioPlayerPage() {
+export default function PlayerPage() {
   const { id } = useParams();
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+
   const [book, setBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  // Audio playback state variables
+
+  // Audio Player State
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  // References to track the HTMLAudioElement and animation frames
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const progressBarRef = useRef<HTMLInputElement | null>(null);
-  const animationRef = useRef<number | null>(null);
-
-  // 1. Fetch targeted book meta assets from cloud function endpoint
+  // Fetch Book Data
   useEffect(() => {
     if (!id) return;
-    async function fetchPlayerBook() {
+    async function fetchBookData() {
       try {
         const res = await fetch(`https://us-central1-summaristt.cloudfunctions.net/getBook?id=${id}`);
         const data = await res.json();
         setBook(data);
-      } catch (error) {
-        console.error("Failed to load player media resource:", error);
+      } catch (err) {
+        console.error("Error fetching player book data:", err);
       } finally {
         setLoading(false);
       }
     }
-    fetchPlayerBook();
+    fetchBookData();
   }, [id]);
 
-  // 2. Format numerical seconds into clean readable strings (e.g., 04:52)
-  const formatTime = (time: number) => {
-    if (isNaN(time)) return "00:00";
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  // Format Seconds into MM:SS
+  const formatTime = (timeInSeconds: number) => {
+    if (isNaN(timeInSeconds)) return "00:00";
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = Math.floor(timeInSeconds % 60);
+    return `${minutes < 10 ? "0" : ""}${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
   };
 
-  // 3. Keep progress bar track position synced while audio streams
-  const updateProgress = () => {
-    if (audioRef.current && progressBarRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
-      animationRef.current = requestAnimationFrame(updateProgress);
-    }
-  };
-
-  // 4. Handle Master Play / Pause logic toggles
+  // Audio Control Handlers
   const togglePlayPause = () => {
     if (!audioRef.current) return;
-
-    if (!isPlaying) {
-      audioRef.current.play();
-      setIsPlaying(true);
-      animationRef.current = requestAnimationFrame(updateProgress);
-    } else {
+    if (isPlaying) {
       audioRef.current.pause();
-      setIsPlaying(false);
-      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    } else {
+      audioRef.current.play();
     }
+    setIsPlaying(!isPlaying);
   };
 
-  // 5. Scrub tracking when the user drags the input range element
-  const handleScrubChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!audioRef.current) return;
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTime = parseFloat(e.target.value);
-    audioRef.current.currentTime = newTime;
+    if (audioRef.current) {
+      audioRef.current.currentTime = newTime;
+    }
     setCurrentTime(newTime);
   };
 
-  // 6. Fast Skip controls (10 seconds backward or forward)
-  const skipBackward = () => {
-    if (!audioRef.current) return;
-    audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 10);
+  const handleAudioEnded = () => {
+    setIsPlaying(false);
+
+    if (!book) return;
+
+    // Retrieve current finished books from localStorage
+    const finishedBooks: Book[] = JSON.parse(localStorage.getItem("finished_books") || "[]");
+
+    // Check if it's already marked as finished to avoid duplicates
+    const alreadyFinished = finishedBooks.some((b) => b.id === book.id);
+
+    if (!alreadyFinished) {
+      finishedBooks.push(book);
+      localStorage.setItem("finished_books", JSON.stringify(finishedBooks));
+    }
   };
 
-  const skipForward = () => {
-    if (!audioRef.current) return;
-    audioRef.current.currentTime = Math.min(duration, audioRef.current.currentTime + 10);
+  const skipTime = (seconds: number) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = Math.min(
+        Math.max(audioRef.current.currentTime + seconds, 0),
+        duration
+      );
+    }
   };
 
-  // Clean up animation loops on component unmount
-  useEffect(() => {
-    return () => {
-      if (animationRef.current) cancelAnimationFrame(animationRef.current);
-    };
-  }, []);
+  if (loading || authLoading) {
+    return <div style={{ padding: "40px", fontFamily: "sans-serif", color: "#666" }}>Loading player...</div>;
+  }
 
-  // Removed hardcoded margins because layout.tsx treats this area as a natural flex column row container now
-  if (loading) return <div style={{ padding: "40px" }}>Initializing media audio framework...</div>;
-  if (!book) return <div style={{ padding: "40px" }}>Media stream asset target missing.</div>;
+  if (!book) {
+    return <div style={{ padding: "40px", fontFamily: "sans-serif" }}>Book content not found.</div>;
+  }
 
   return (
-    <>
-      {/* Underlying Hidden Native Audio Engine element */}
-      <audio 
-        ref={audioRef} 
-        src={book.audioLink} 
-        onLoadedMetadata={() => {
-          if (audioRef.current) setDuration(audioRef.current.duration);
-        }}
-        onEnded={() => {
-          setIsPlaying(false);
-          if (animationRef.current) cancelAnimationFrame(animationRef.current);
-        }}
-      />
+    <div style={{
+      maxWidth: "800px",
+      margin: "0 auto",
+      padding: "32px 24px 120px 24px", // Bottom padding ensures audio bar doesn't overlap text
+      fontFamily: "sans-serif",
+      color: "#03314b"
+    }}>
+      {/* Hidden Native Audio Element */}
+      {book.audioLink && (
+        <audio
+          ref={audioRef}
+          src={book.audioLink}
+          onLoadedMetadata={() => {
+            if (audioRef.current) setDuration(audioRef.current.duration);
+          }}
+          onTimeUpdate={() => {
+            if (audioRef.current) setCurrentTime(audioRef.current.currentTime);
+          }}
+          onEnded={handleAudioEnded} // <--- Wire function here
+        />
+      )}
 
-      {/* Main Content Layout Block */}
-      <div style={{ 
-        padding: "40px", 
-        paddingBottom: "140px", 
-        maxWidth: "800px", 
-        margin: "0 auto" 
+      {/* TOP NAV / TITLE HEADER */}
+      <button
+        onClick={() => router.back()}
+        style={{
+          display: "flex", alignItems: "center", gap: "8px", background: "none",
+          border: "none", color: "#0369a1", cursor: "pointer", fontSize: "15px",
+          fontWeight: "600", marginBottom: "24px", padding: 0
+        }}
+      >
+        <BsArrowLeft style={{ fontSize: "18px" }} /> Back
+      </button>
+
+      <h1 style={{ fontSize: "28px", fontWeight: "700", marginBottom: "8px" }}>{book.title}</h1>
+      <p style={{ fontSize: "16px", color: "#6b7280", marginBottom: "24px" }}>By {book.author}</p>
+
+      <hr style={{ border: "none", borderTop: "1px solid #e5e7eb", marginBottom: "32px" }} />
+
+      {/* SUMMARY TEXT DISPLAY */}
+      <div style={{
+        fontSize: "16px",
+        lineHeight: "1.8",
+        color: "#1f2937",
+        whiteSpace: "pre-line" // Preserves summary paragraphs
       }}>
-        <h1 style={{ fontSize: "28px", fontWeight: "700", marginBottom: "12px", borderBottom: "1px solid #f3f4f6", paddingBottom: "16px" }}>
-          {book.title}
-        </h1>
-
-        <div style={{ 
-          whiteSpace: "pre-line", 
-          lineHeight: "1.7", 
-          color: "#374151", 
-          fontSize: "16px" 
-        }}>
-          {book.summary}
-        </div>
+        {book.summary || "No text summary available for this item."}
       </div>
 
-      {/* FIXED BOTTOM AUDIO CONTROLLER BAR */}
-      <footer style={{
+      {/* FIXED BOTTOM AUDIO PLAYER BAR */}
+      <div style={{
         position: "fixed",
         bottom: 0,
-        left: "280px", // Maintains perfect positioning right up against the global sticky sidebar boundary
+        left: 0,
         right: 0,
-        height: "100px",
-        backgroundColor: "#042330", 
+        backgroundColor: "#042330",
         color: "#fff",
+        padding: "16px 24px",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "0 40px",
-        zIndex: 200
+        gap: "20px",
+        boxShadow: "0 -4px 12px rgba(0,0,0,0.15)",
+        zIndex: 9999
       }}>
-        {/* Left Side: Thumbnail Preview */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", width: "25%" }}>
-          <img src={book.imageLink} alt={book.title} style={{ width: "48px", height: "48px", borderRadius: "4px", objectFit: "cover" }} />
-          <div style={{ minWidth: 0 }}>
-            <h4 style={{ fontSize: "14px", fontWeight: "600", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{book.title}</h4>
-            <p style={{ fontSize: "12px", color: "#9ca3af", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{book.author}</p>
+        {/* BOOK INFO MINI */}
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: "200px" }}>
+          {book.imageLink && (
+            <img src={book.imageLink} alt={book.title} style={{ width: "48px", height: "48px", borderRadius: "4px", objectFit: "cover" }} />
+          )}
+          <div>
+            <h4 style={{ margin: 0, fontSize: "14px", fontWeight: "600", color: "#fff" }}>{book.title}</h4>
+            <p style={{ margin: "2px 0 0 0", fontSize: "12px", color: "#9ca3af" }}>{book.author}</p>
           </div>
         </div>
 
-        {/* Center Section: Core Controls & Slider */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", width: "50%" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
-            <button onClick={skipBackward} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer" }}>
-              <BsArrowLeftShort style={{ fontSize: "32px" }} />
-            </button>
-            
-            <button onClick={togglePlayPause} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer" }}>
-              {isPlaying ? <BsPauseCircleFill style={{ fontSize: "44px" }} /> : <BsPlayCircleFill style={{ fontSize: "44px" }} />}
+        {/* CONTROLS & PROGRESS BAR */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", flexGrow: 1, maxWidth: "500px" }}>
+
+          {/* CONTROL BUTTONS */}
+          <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+            <button
+              onClick={() => skipTime(-10)}
+              style={{ background: "none", border: "none", color: "#d1d5db", cursor: "pointer", fontSize: "20px", display: "flex" }}
+              title="Rewind 10s"
+            >
+              <BsArrowCounterclockwise />
             </button>
 
-            <button onClick={skipForward} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer" }}>
-              <BsArrowRightShort style={{ fontSize: "32px" }} />
+            <button
+              onClick={togglePlayPause}
+              style={{ background: "none", border: "none", color: "#2bd97c", cursor: "pointer", fontSize: "36px", display: "flex" }}
+            >
+              {isPlaying ? <BsPauseCircleFill /> : <BsPlayCircleFill />}
+            </button>
+
+            <button
+              onClick={() => skipTime(10)}
+              style={{ background: "none", border: "none", color: "#d1d5db", cursor: "pointer", fontSize: "20px", display: "flex" }}
+              title="Forward 10s"
+            >
+              <BsArrowClockwise />
             </button>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", width: "100%", gap: "12px" }}>
-            <span style={{ fontSize: "12px", color: "#9ca3af", width: "40px", textAlign: "right" }}>{formatTime(currentTime)}</span>
-            <input 
+          {/* TIMERS & SLIDER */}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", width: "100%", fontSize: "12px", color: "#9ca3af" }}>
+            <span>{formatTime(currentTime)}</span>
+            <input
               type="range"
-              ref={progressBarRef}
               min={0}
-              max={duration || 100}
+              max={duration || 0}
               value={currentTime}
-              onChange={handleScrubChange}
-              style={{
-                flexGrow: 1,
-                accentColor: "#2563eb",
-                height: "4px",
-                cursor: "pointer"
-              }}
+              onChange={handleSeek}
+              style={{ flexGrow: 1, cursor: "pointer", accentColor: "#2bd97c" }}
             />
-            <span style={{ fontSize: "12px", color: "#9ca3af", width: "40px" }}>{formatTime(duration)}</span>
+            <span>{formatTime(duration)}</span>
           </div>
+
         </div>
 
-        {/* Balance Element */}
-        <div style={{ width: "25%" }}></div>
-      </footer>
-    </>
+        {/* SPACER FOR BALANCE */}
+        <div style={{ width: "200px" }} />
+      </div>
+
+    </div>
   );
 }

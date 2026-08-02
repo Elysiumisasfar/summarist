@@ -1,1 +1,21 @@
 @import "tailwindcss";
+
+/* Skeleton Pulse Animation */
+@keyframes skeleton-pulse {
+    0% {
+        background-color: #e5e7eb;
+    }
+
+    50% {
+        background-color: #f3f4f6;
+    }
+
+    100% {
+        background-color: #e5e7eb;
+    }
+}
+
+.skeleton {
+    animation: skeleton-pulse 1.5s infinite ease-in-out;
+    border-radius: 6px;
+}
