@@ -1,14 +1,5 @@
-// lib/firebase.ts
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { 
-  getAuth, 
-  GoogleAuthProvider, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  sendPasswordResetEmail, 
-  signInAnonymously, 
-  signOut 
-} from "firebase/auth";
+import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -19,17 +10,10 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Prevent Firebase initialization cloning issues on local hot-reloads
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const googleProvider = new GoogleAuthProvider();
+// Initialize Firebase only if an API key exists or if an app is already initialized
+const app = getApps().length > 0 
+  ? getApp() 
+  : (process.env.NEXT_PUBLIC_FIREBASE_API_KEY ? initializeApp(firebaseConfig) : null);
 
-export { 
-  auth, 
-  googleProvider, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  sendPasswordResetEmail, 
-  signInAnonymously, 
-  signOut 
-};
+// Safely export auth
+export const auth = app ? getAuth(app) : ({} as ReturnType<typeof getAuth>);
