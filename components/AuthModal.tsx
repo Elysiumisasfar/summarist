@@ -3,14 +3,14 @@ import React, { useState } from "react";
 import { AiOutlineClose } from "react-icons/ai";
 import { FcGoogle } from "react-icons/fc";
 import { IoMdPerson } from "react-icons/io";
-import { 
-  auth, 
-  googleProvider, 
+import { auth } from "@/lib/firebase";
+import {
+  GoogleAuthProvider, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   sendPasswordResetEmail, 
   signInAnonymously 
-} from "@/lib/firebase";
+} from "firebase/auth";
 import { signInWithPopup } from "firebase/auth";
 
 interface AuthModalProps {
@@ -19,6 +19,16 @@ interface AuthModalProps {
 }
 
 type AuthView = "login" | "register" | "forgot-password";
+
+const handleGoogleSignIn = async () => {
+  try {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+    // ... handle successful login
+  } catch (err) {
+    console.error(err);
+  }
+};
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [view, setView] = useState<AuthView>("login");
@@ -52,7 +62,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
   const handleGoogleLogin = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
       onClose();
     } catch (err: any) {
       setError(err.message);
