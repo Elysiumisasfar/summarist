@@ -2,28 +2,30 @@
 
 import React from "react";
 import { usePathname } from "next/navigation";
-import { useAuth } from "@/context/AuthContext"; // Import your Auth hook
+import { useAuth } from "@/context/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 
 export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user } = useAuth(); // Read logged-in user state from context
+  const { user } = useAuth();
 
   const isLandingPage = pathname === "/";
 
-  // Hide Sidebar ONLY if on the landing page AND user is NOT logged in
   if (isLandingPage && !user) {
     return <>{children}</>;
   }
 
-  // Show Sidebar if logged in OR if on any internal app route (/for-you, /library, etc.)
   return (
-    <div style={{ display: "flex", width: "100%", minHeight: "100vh" }}>
+    <div className="flex flex-col md:flex-row w-full min-h-screen overflow-x-hidden">
+      {/* Sidebar handles mobile drawer / collapse */}
       <Sidebar />
-      <div style={{ display: "flex", flexDirection: "column", flexGrow: 1, minWidth: 0 }}>
+      
+      <div className="flex flex-col flex-grow min-w-0 w-full">
         <Header />
-        <main style={{ flexGrow: 1 }}>{children}</main>
+        <main className="flex-grow p-4 md:p-8 max-w-full overflow-x-hidden">
+          {children}
+        </main>
       </div>
     </div>
   );
