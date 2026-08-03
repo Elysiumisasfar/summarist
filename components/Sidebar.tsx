@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -14,7 +15,7 @@ import {
   AiOutlineMenu,
   AiOutlineClose
 } from "react-icons/ai";
-import { BsBookmark } from "react-icons/bs";
+import { BsBookmark, BsBook } from "react-icons/bs";
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -22,7 +23,7 @@ export default function Sidebar() {
   const { user, openAuthModal, logout } = useAuth();
 
   const navItems = [
-    { label: "For You", icon: <AiOutlineHome />, href: "/for-you", active: pathname === "/for-you" },
+    { label: "For you", icon: <AiOutlineHome />, href: "/for-you", active: pathname === "/for-you" },
     { label: "My Library", icon: <BsBookmark />, href: "/library", active: pathname === "/library" },
     { label: "Highlights", icon: <AiOutlineHighlight />, href: "#", disabled: true },
     { label: "Search", icon: <AiOutlineSearch />, href: "#", disabled: true },
@@ -32,61 +33,105 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile Hamburger Trigger (Top-Left) */}
+      <style jsx>{`
+        .sidebar-desktop {
+          width: 200px;
+          min-width: 200px;
+          height: 100vh;
+          position: sticky;
+          top: 0;
+          background-color: #f7faf9;
+          border-right: 1px solid #e5e7eb;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          padding: 24px 16px;
+          box-sizing: border-box;
+        }
+
+        .mobile-hamburger {
+          display: none;
+        }
+
+        @media (max-width: 768px) {
+          .mobile-hamburger {
+            display: block;
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            z-index: 50;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+          }
+
+          .sidebar-desktop {
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 50;
+            transform: ${isOpen ? "translateX(0)" : "translateX(-100%)"};
+            transition: transform 0.3s ease-in-out;
+            box-shadow: ${isOpen ? "4px 0 12px rgba(0,0,0,0.15)" : "none"};
+          }
+        }
+      `}</style>
+
+      {/* Mobile Hamburger Button */}
       <button 
-        onClick={() => setIsOpen(true)}
-        className="md:hidden fixed top-3 left-4 z-40 p-2 text-gray-700 bg-transparent border-none cursor-pointer"
-        aria-label="Open Menu"
+        className="mobile-hamburger" 
+        onClick={() => setIsOpen(!isOpen)}
+        aria-label="Toggle Navigation"
       >
-        <AiOutlineMenu size={24} />
+        {isOpen ? <AiOutlineClose size={24} /> : <AiOutlineMenu size={24} />}
       </button>
 
-      {/* Dark Overlay when Drawer is Open */}
+      {/* Mobile Drawer Overlay */}
       {isOpen && (
         <div 
           onClick={() => setIsOpen(false)}
-          className="md:hidden fixed inset-0 bg-black/50 z-50 transition-opacity"
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.4)",
+            zIndex: 45
+          }}
         />
       )}
 
-      {/* Sidebar / Drawer Element */}
-      <aside 
-        className={`
-          fixed top-0 left-0 z-50 h-full w-[260px] bg-[#f7faf9] border-r border-gray-200 
-          flex flex-col justify-between p-6 transition-transform duration-300 ease-in-out
-          md:static md:translate-x-0 md:min-w-[280px] md:h-screen md:sticky
-          ${isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"}
-        `}
-      >
+      <aside className="sidebar-desktop">
         <div>
-          {/* Header row with logo and mobile close button */}
-          <div className="flex items-center justify-between mb-8">
-            <Link 
-              href="/for-you" 
-              onClick={() => setIsOpen(false)}
-              className="flex items-center gap-2 text-[#03314b] no-underline"
-            >
-              <span className="text-xl font-extrabold tracking-tight">Summarist</span>
-            </Link>
+          {/* Brand Logo */}
+          <Link 
+            href="/for-you" 
+            onClick={() => setIsOpen(false)} 
+            style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: "8px", 
+              textDecoration: "none", 
+              color: "#03314b", 
+              marginBottom: "36px",
+              paddingLeft: "8px"
+            }}
+          >
+            <BsBook style={{ fontSize: "24px" }} />
+            <span style={{ fontSize: "20px", fontWeight: "700", letterSpacing: "-0.5px" }}>Summarist</span>
+          </Link>
 
-            {/* Mobile Close Button */}
-            <button
-              onClick={() => setIsOpen(false)}
-              className="md:hidden p-1 text-gray-600 bg-transparent border-none cursor-pointer"
-            >
-              <AiOutlineClose size={20} />
-            </button>
-          </div>
-
-          <nav className="flex flex-col gap-2">
+          {/* Navigation Links */}
+          <nav style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             {navItems.map((item, idx) => {
               if (item.disabled) {
                 return (
                   <div
                     key={idx}
-                    className="flex items-center gap-3 p-3 text-gray-400 cursor-not-allowed text-sm font-medium"
+                    style={{
+                      display: "flex", alignItems: "center", gap: "12px", padding: "8px",
+                      color: "#9ca3af", cursor: "not-allowed", fontSize: "14px", fontWeight: "500"
+                    }}
                   >
-                    <span className="text-xl">{item.icon}</span>
+                    <span style={{ fontSize: "18px" }}>{item.icon}</span>
                     {item.label}
                   </div>
                 );
@@ -97,15 +142,20 @@ export default function Sidebar() {
                   key={idx}
                   href={item.href}
                   onClick={() => setIsOpen(false)}
-                  className={`flex items-center gap-3 p-3 rounded-lg text-sm no-underline font-medium transition-colors ${
-                    item.active 
-                      ? "bg-sky-100 text-sky-700 font-bold" 
-                      : "text-gray-700 hover:bg-gray-100"
-                  }`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    padding: "8px",
+                    borderRadius: "6px",
+                    textDecoration: "none",
+                    fontSize: "14px",
+                    fontWeight: item.active ? "600" : "500",
+                    color: item.active ? "#03314b" : "#374151",
+                    backgroundColor: item.active ? "#e1f7e5" : "transparent"
+                  }}
                 >
-                  <span className={`text-xl ${item.active ? "text-sky-700" : "text-gray-500"}`}>
-                    {item.icon}
-                  </span>
+                  <span style={{ fontSize: "18px", color: "#03314b" }}>{item.icon}</span>
                   {item.label}
                 </Link>
               );
@@ -113,22 +163,31 @@ export default function Sidebar() {
           </nav>
         </div>
 
-        <div>
+        {/* Auth Action at the bottom of sidebar */}
+        <div style={{ paddingTop: "16px", borderTop: "1px solid #e5e7eb" }}>
           {user ? (
             <button
               onClick={() => { setIsOpen(false); logout(); }}
-              className="w-full flex items-center gap-3 p-3 rounded-lg border-none bg-transparent cursor-pointer text-red-600 font-semibold text-sm"
+              style={{
+                width: "100%", display: "flex", alignItems: "center", gap: "12px", padding: "8px",
+                borderRadius: "6px", border: "none", backgroundColor: "transparent", cursor: "pointer",
+                color: "#374151", fontSize: "14px", fontWeight: "500"
+              }}
             >
-              <AiOutlineLogout className="text-xl" />
-              Log Out
+              <AiOutlineLogout style={{ fontSize: "18px" }} />
+              Log out
             </button>
           ) : (
             <button
               onClick={() => { setIsOpen(false); openAuthModal(); }}
-              className="w-full flex items-center gap-3 p-3 rounded-lg border-none bg-transparent cursor-pointer text-[#03314b] font-semibold text-sm"
+              style={{
+                width: "100%", display: "flex", alignItems: "center", gap: "12px", padding: "8px",
+                borderRadius: "6px", border: "none", backgroundColor: "transparent", cursor: "pointer",
+                color: "#374151", fontSize: "14px", fontWeight: "500"
+              }}
             >
-              <AiOutlineLogin className="text-xl" />
-              Log In
+              <AiOutlineLogin style={{ fontSize: "18px" }} />
+              Login
             </button>
           )}
         </div>

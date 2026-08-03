@@ -12,20 +12,18 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
 
   const isLandingPage = pathname === "/";
 
+  // Render unauthenticated public landing page
   if (isLandingPage && !user) {
     return <>{children}</>;
   }
 
+  // Render main app framework (Sidebar + Header) on all dashboard routes
   return (
-    <div className="flex flex-col md:flex-row w-full min-h-screen overflow-x-hidden">
-      {/* Sidebar handles mobile drawer / collapse */}
+    <div style={{ display: "flex", width: "100%", minHeight: "100vh" }}>
       <Sidebar />
-      
-      <div className="flex flex-col flex-grow min-w-0 w-full">
+      <div style={{ display: "flex", flexDirection: "column", flexGrow: 1, minWidth: 0 }}>
         <Header />
-        <main className="flex-grow p-4 md:p-8 max-w-full overflow-x-hidden">
-          {children}
-        </main>
+        <main style={{ flexGrow: 1 }}>{children}</main>
       </div>
     </div>
   );
