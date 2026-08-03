@@ -30,44 +30,53 @@ export default function Sidebar() {
     { label: "Help & Support", icon: <AiOutlineQuestionCircle />, href: "#", disabled: true },
   ];
 
-  const toggleSidebar = () => setIsOpen(!isOpen);
-
   return (
     <>
-      {/* Mobile Hamburger Toggle Button */}
+      {/* Mobile Hamburger Trigger (Top-Left) */}
       <button 
-        onClick={toggleSidebar}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-md bg-white border border-gray-200 shadow-sm"
-        aria-label="Toggle Menu"
+        onClick={() => setIsOpen(true)}
+        className="md:hidden fixed top-3 left-4 z-40 p-2 text-gray-700 bg-transparent border-none cursor-pointer"
+        aria-label="Open Menu"
       >
-        {isOpen ? <AiOutlineClose size={22} /> : <AiOutlineMenu size={22} />}
+        <AiOutlineMenu size={24} />
       </button>
 
-      {/* Backdrop for Mobile */}
+      {/* Dark Overlay when Drawer is Open */}
       {isOpen && (
         <div 
           onClick={() => setIsOpen(false)}
-          className="md:hidden fixed inset-0 bg-black/40 z-40"
+          className="md:hidden fixed inset-0 bg-black/50 z-50 transition-opacity"
         />
       )}
 
-      {/* Sidebar Container */}
+      {/* Sidebar / Drawer Element */}
       <aside 
         className={`
-          fixed top-0 left-0 z-40 h-full w-[280px] bg-[#f7faf9] border-r border-gray-200 
+          fixed top-0 left-0 z-50 h-full w-[260px] bg-[#f7faf9] border-r border-gray-200 
           flex flex-col justify-between p-6 transition-transform duration-300 ease-in-out
           md:static md:translate-x-0 md:min-w-[280px] md:h-screen md:sticky
-          ${isOpen ? "translate-x-0 shadow-lg" : "-translate-x-full md:translate-x-0"}
+          ${isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"}
         `}
       >
         <div>
-          <Link 
-            href="/for-you" 
-            onClick={() => setIsOpen(false)}
-            className="flex items-center gap-2 text-[#03314b] mb-8 pl-3 no-underline"
-          >
-            <span className="text-xl font-extrabold tracking-tight">Summarist</span>
-          </Link>
+          {/* Header row with logo and mobile close button */}
+          <div className="flex items-center justify-between mb-8">
+            <Link 
+              href="/for-you" 
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-2 text-[#03314b] no-underline"
+            >
+              <span className="text-xl font-extrabold tracking-tight">Summarist</span>
+            </Link>
+
+            {/* Mobile Close Button */}
+            <button
+              onClick={() => setIsOpen(false)}
+              className="md:hidden p-1 text-gray-600 bg-transparent border-none cursor-pointer"
+            >
+              <AiOutlineClose size={20} />
+            </button>
+          </div>
 
           <nav className="flex flex-col gap-2">
             {navItems.map((item, idx) => {
