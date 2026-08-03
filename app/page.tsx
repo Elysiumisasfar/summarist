@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { auth, signOut } from "@/lib/firebase";
-import { onAuthStateChanged, User } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { signOut, onAuthStateChanged, User } from "firebase/auth";
 import Navbar from "@/components/Navbar";
 import Landing from "@/components/Landing";
 import Features from "@/components/Features";
