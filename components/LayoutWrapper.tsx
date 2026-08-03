@@ -2,19 +2,22 @@
 
 import React from "react";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/AuthContext"; // Import your Auth hook
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 
 export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { user } = useAuth(); // Read logged-in user state from context
+
   const isLandingPage = pathname === "/";
 
-  // If we are on the landing page ("/" or page.tsx), don't render Sidebar or Header
-  if (isLandingPage) {
+  // Hide Sidebar ONLY if on the landing page AND user is NOT logged in
+  if (isLandingPage && !user) {
     return <>{children}</>;
   }
 
-  // On app routes (/for-you, /library, /book/[id]), render Sidebar and Header
+  // Show Sidebar if logged in OR if on any internal app route (/for-you, /library, etc.)
   return (
     <div style={{ display: "flex", width: "100%", minHeight: "100vh" }}>
       <Sidebar />
